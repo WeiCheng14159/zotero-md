@@ -1,1 +1,1 @@
-automd-name = AutoMD
+zoteromd-name = Zotero MD

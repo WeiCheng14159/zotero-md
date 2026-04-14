@@ -27,9 +27,9 @@ export function detectPython(): string | null {
       const entries = dirFile.directoryEntries;
       while (entries?.hasMoreElements()) {
         // @ts-expect-error nsIFile enumeration not fully typed
-        const entry = entries.getNext()?.QueryInterface(
-          Components.interfaces.nsIFile,
-        );
+        const entry = entries
+          .getNext()
+          ?.QueryInterface(Components.interfaces.nsIFile);
         if (entry?.isDirectory()) {
           candidates.push(`${entry.path}/bin/python3`);
         }
@@ -48,7 +48,7 @@ export function detectPython(): string | null {
   for (const path of candidates) {
     if (fileExists(path)) {
       setPref("pythonPath", path);
-      ztoolkit.log(`[AutoMD] Auto-detected python3 at: ${path}`);
+      ztoolkit.log(`[ZoteroMD] Auto-detected python3 at: ${path}`);
       return path;
     }
   }
@@ -175,7 +175,7 @@ export async function runConversion(
   const script = buildPythonScript(engine, pdfPath, outputPath);
   const cmd = `${pythonPath} -c '${script.replace(/'/g, "'\\''")}'`;
 
-  ztoolkit.log(`[AutoMD] Running ${engine} conversion: ${pdfPath}`);
+  ztoolkit.log(`[ZoteroMD] Running ${engine} conversion: ${pdfPath}`);
 
   await spawnProcess("/bin/sh", ["-c", cmd]);
 
@@ -186,7 +186,7 @@ export async function runConversion(
     );
   }
 
-  ztoolkit.log(`[AutoMD] Conversion complete: ${outputPath}`);
+  ztoolkit.log(`[ZoteroMD] Conversion complete: ${outputPath}`);
 }
 
 /**
@@ -210,7 +210,9 @@ export async function convertAttachment(item: Zotero.Item): Promise<string> {
 
   const pythonPath = getPref("pythonPath") || detectPython();
   if (!pythonPath) {
-    throw new Error("python3 not found. Set the Python path in AutoMD settings.");
+    throw new Error(
+      "python3 not found. Set the Python path in Zotero MD settings.",
+    );
   }
 
   const engine = getPref("converterEngine") || "docling";

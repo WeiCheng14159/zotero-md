@@ -3,7 +3,6 @@
 /* eslint-disable */
 // @ts-nocheck
 export type FluentMessageId =
-  | 'automd-name'
   | 'batch-complete'
   | 'batch-progress'
   | 'batch-skipped'
@@ -27,4 +26,5 @@ export type FluentMessageId =
   | 'prefs-title'
   | 'python-not-found'
   | 'startup-begin'
-  | 'startup-finish';
+  | 'startup-finish'
+  | 'zoteromd-name';

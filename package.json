@@ -1,21 +1,21 @@
 {
-  "name": "zotero-automd",
+  "name": "zotero-local-pdf-manager",
   "type": "module",
   "version": "0.1.0",
-  "description": "Automatically convert paper PDFs to Markdown after download",
+  "description": "Download or remove local PDF copies for Zotero papers",
   "config": {
-    "addonName": "AutoMD",
-    "addonID": "automd@zotero.local",
-    "addonRef": "automd",
-    "addonInstance": "AutoMD",
-    "prefsPrefix": "extensions.zotero.automd"
+    "addonName": "Local PDF Manager",
+    "addonID": "localpdfmanager@zotero.local",
+    "addonRef": "localpdfmanager",
+    "addonInstance": "LocalPdfManager",
+    "prefsPrefix": "extensions.zotero.localpdfmanager"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/WeiCheng14159/zotero-automd.git"
+    "url": "git+https://github.com/WeiCheng14159/zotero-plugin-template.git"
   },
   "author": "wei",
-  "homepage": "https://github.com/WeiCheng14159/zotero-automd#readme",
+  "homepage": "https://github.com/WeiCheng14159/zotero-plugin-template#readme",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "start": "zotero-plugin serve",

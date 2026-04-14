@@ -38,13 +38,13 @@ AutoMD is a [Zotero 7](https://www.zotero.org) plugin that automatically convert
 
 Open **Edit → Preferences → AutoMD** (or **Zotero → Settings → AutoMD** on macOS):
 
-| Setting | Default | Description |
-|---|---|---|
-| Auto-convert on download | On | Automatically convert new PDFs when added |
-| Converter engine | `docling` | Choose between `docling` and `pymupdf4llm` |
-| Python path | *(auto-detected)* | Override the Python 3 binary path |
-| Output directory | *(next to PDF)* | Custom directory for `.md` output files |
-| Attach result to Zotero | On | Import the `.md` file as a Zotero attachment |
+| Setting                  | Default           | Description                                  |
+| ------------------------ | ----------------- | -------------------------------------------- |
+| Auto-convert on download | On                | Automatically convert new PDFs when added    |
+| Converter engine         | `docling`         | Choose between `docling` and `pymupdf4llm`   |
+| Python path              | _(auto-detected)_ | Override the Python 3 binary path            |
+| Output directory         | _(next to PDF)_   | Custom directory for `.md` output files      |
+| Attach result to Zotero  | On                | Import the `.md` file as a Zotero attachment |
 
 ## How It Works
 
@@ -68,13 +68,13 @@ cp .env.example .env
 
 ### Commands
 
-| Command | Description |
-|---|---|
-| `npm start` | Start dev server with hot-reload |
-| `npm run build` | Build plugin (output in `.scaffold/build/`) |
-| `npm run lint:check` | Check formatting and linting |
-| `npm run lint:fix` | Auto-fix formatting and linting |
-| `npm run test` | Run integration tests |
+| Command              | Description                                 |
+| -------------------- | ------------------------------------------- |
+| `npm start`          | Start dev server with hot-reload            |
+| `npm run build`      | Build plugin (output in `.scaffold/build/`) |
+| `npm run lint:check` | Check formatting and linting                |
+| `npm run lint:fix`   | Auto-fix formatting and linting             |
+| `npm run test`       | Run integration tests                       |
 
 ### Project Structure
 

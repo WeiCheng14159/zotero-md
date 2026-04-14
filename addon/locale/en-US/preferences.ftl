@@ -1,4 +1,4 @@
-pref-title = AutoMD Settings
+pref-title = Zotero MD Settings
 pref-auto-convert =
     .label = Auto-convert PDFs on download
 pref-converter-engine = Converter engine
