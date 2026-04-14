@@ -127,9 +127,11 @@ async function spawnProcess(bin: string, args: string[]): Promise<void> {
     proc.runAsync(args, args.length, {
       observe(_subject: unknown, topic: string) {
         if (topic === "process-finished") {
-          proc.exitValue === 0
-            ? resolve()
-            : reject(new Error(`Process exited with code ${proc.exitValue}`));
+          if (proc.exitValue === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Process exited with code ${proc.exitValue}`));
+          }
         } else if (topic === "process-failed") {
           reject(new Error("Process failed to start"));
         }
