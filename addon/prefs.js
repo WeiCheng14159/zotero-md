@@ -1,2 +1,5 @@
-pref("enable", true);
-pref("input", "This is input");
+pref("autoConvert", true);
+pref("converterEngine", "docling");
+pref("pythonPath", "");
+pref("outputDirectory", "");
+pref("attachResult", true);

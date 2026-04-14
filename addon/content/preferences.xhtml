@@ -6,24 +6,54 @@
 >
   <label><html:h2 data-l10n-id="pref-title"></html:h2></label>
   <checkbox
-    id="zotero-prefpane-__addonRef__-enable"
-    preference="enable"
-    data-l10n-id="pref-enable"
+    id="zotero-prefpane-__addonRef__-autoConvert"
+    preference="autoConvert"
+    data-l10n-id="pref-auto-convert"
   />
-  <hbox>
+  <vbox>
     <html:label
-      for="zotero-prefpane-__addonRef__-input"
-      data-l10n-id="pref-input"
+      for="zotero-prefpane-__addonRef__-converterEngine"
+      data-l10n-id="pref-converter-engine"
+    ></html:label>
+    <menulist
+      id="zotero-prefpane-__addonRef__-converterEngine"
+      preference="converterEngine"
+    >
+      <menupopup>
+        <menuitem value="docling" data-l10n-id="pref-engine-docling" />
+        <menuitem value="pymupdf4llm" data-l10n-id="pref-engine-pymupdf4llm" />
+      </menupopup>
+    </menulist>
+  </vbox>
+  <vbox>
+    <html:label
+      for="zotero-prefpane-__addonRef__-pythonPath"
+      data-l10n-id="pref-python-path"
     ></html:label>
     <html:input
       type="text"
-      id="zotero-prefpane-__addonRef__-input"
-      preference="input"
+      id="zotero-prefpane-__addonRef__-pythonPath"
+      preference="pythonPath"
     ></html:input>
-  </hbox>
-  <hbox class="virtualized-table-container" flex="1" height="300px">
-    <html:div id="__addonRef__-table-container" />
-  </hbox>
+    <html:small data-l10n-id="pref-python-path-desc" style="opacity: 0.7;"></html:small>
+  </vbox>
+  <vbox>
+    <html:label
+      for="zotero-prefpane-__addonRef__-outputDirectory"
+      data-l10n-id="pref-output-directory"
+    ></html:label>
+    <html:input
+      type="text"
+      id="zotero-prefpane-__addonRef__-outputDirectory"
+      preference="outputDirectory"
+    ></html:input>
+    <html:small data-l10n-id="pref-output-directory-desc" style="opacity: 0.7;"></html:small>
+  </vbox>
+  <checkbox
+    id="zotero-prefpane-__addonRef__-attachResult"
+    preference="attachResult"
+    data-l10n-id="pref-attach-result"
+  />
 </groupbox>
 <vbox>
   <html:label

@@ -1,13 +1,7 @@
-import {
-  BasicExampleFactory,
-  HelperExampleFactory,
-  KeyExampleFactory,
-  PromptExampleFactory,
-  UIExampleFactory,
-} from "./modules/examples";
 import { getString, initLocale } from "./utils/locale";
-import { registerPrefsScripts } from "./modules/preferenceScript";
+import { getPref } from "./utils/prefs";
 import { createZToolkit } from "./utils/ztoolkit";
+import { convertAttachment, detectPython, verifyEngine } from "./modules/converter";
 
 async function onStartup() {
   await Promise.all([
@@ -18,38 +12,119 @@ async function onStartup() {
 
   initLocale();
 
-  BasicExampleFactory.registerPrefs();
+  // Register preferences pane
+  Zotero.PreferencePanes.register({
+    pluginID: addon.data.config.addonID,
+    src: rootURI + "content/preferences.xhtml",
+    label: getString("prefs-title"),
+    image: `chrome://${addon.data.config.addonRef}/content/icons/favicon.png`,
+  });
 
-  BasicExampleFactory.registerNotifier();
+  // Auto-detect python3 and verify converter engine
+  const pythonPath = detectPython();
+  if (pythonPath) {
+    ztoolkit.log(`[AutoMD] python3 found at: ${pythonPath}`);
+    const engine = getPref("converterEngine") || "docling";
+    verifyEngine(pythonPath, engine).then((ok) => {
+      if (!ok) {
+        setTimeout(() => {
+          new ztoolkit.ProgressWindow("AutoMD", {
+            closeOnClick: true,
+            closeTime: -1,
+          })
+            .createLine({
+              text: getString("engine-not-found", {
+                args: { engine },
+              }),
+              type: "fail",
+              progress: 100,
+            })
+            .show()
+            .startCloseTimer(10000);
+        }, 2000);
+      }
+    });
+  } else {
+    ztoolkit.log("[AutoMD] python3 not found");
+    setTimeout(() => {
+      new ztoolkit.ProgressWindow("AutoMD", {
+        closeOnClick: true,
+        closeTime: -1,
+      })
+        .createLine({
+          text: getString("python-not-found"),
+          type: "fail",
+          progress: 100,
+        })
+        .show()
+        .startCloseTimer(10000);
+    }, 2000);
+  }
 
-  KeyExampleFactory.registerShortcuts();
+  // Register notifier to watch for new PDF attachments
+  const callback = {
+    notify: async (
+      event: string,
+      type: string,
+      ids: number[] | string[],
+      extraData: { [key: string]: any },
+    ) => {
+      if (!addon?.data.alive) {
+        unregisterNotifier();
+        return;
+      }
+      onNotify(event, type, ids, extraData);
+    },
+  };
 
-  await UIExampleFactory.registerExtraColumn();
+  addon.data.notifierID = Zotero.Notifier.registerObserver(callback, [
+    "item",
+  ]);
 
-  await UIExampleFactory.registerExtraColumnWithCustomCell();
-
-  UIExampleFactory.registerItemPaneCustomInfoRow();
-
-  UIExampleFactory.registerItemPaneSection();
-
-  UIExampleFactory.registerReaderItemPaneSection();
+  Zotero.Plugins.addObserver({
+    shutdown: ({ id }: { id: string }) => {
+      if (id === addon.data.config.addonID) unregisterNotifier();
+    },
+  });
 
   await Promise.all(
     Zotero.getMainWindows().map((win) => onMainWindowLoad(win)),
   );
 
-  // Mark initialized as true to confirm plugin loading status
-  // outside of the plugin (e.g. scaffold testing process)
   addon.data.initialized = true;
 }
 
+function unregisterNotifier() {
+  if (addon.data.notifierID) {
+    Zotero.Notifier.unregisterObserver(addon.data.notifierID);
+    addon.data.notifierID = undefined;
+  }
+}
+
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
-  // Create ztoolkit for every window
   addon.data.ztoolkit = createZToolkit();
 
   win.MozXULElement.insertFTLIfNeeded(
     `${addon.data.config.addonRef}-mainWindow.ftl`,
   );
+
+  // Right-click context menu: "Convert to Markdown"
+  ztoolkit.Menu.register("item", {
+    tag: "menuitem",
+    id: "automd-convert-selected",
+    label: getString("menu-convert-selected"),
+    commandListener: () => convertSelectedItems(),
+    icon: `chrome://${addon.data.config.addonRef}/content/icons/favicon@0.5x.png`,
+  });
+
+  // Tools menu: "AutoMD: Convert All PDFs"
+  ztoolkit.Menu.register("menuTools", {
+    tag: "menuitem",
+    id: "automd-convert-all",
+    label: getString("menu-convert-all"),
+    commandListener: () => convertAllPdfs(),
+    icon: `chrome://${addon.data.config.addonRef}/content/icons/favicon@0.5x.png`,
+  });
 
   const popupWin = new ztoolkit.ProgressWindow(addon.data.config.addonName, {
     closeOnClick: true,
@@ -62,128 +137,306 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
     })
     .show();
 
-  await Zotero.Promise.delay(1000);
-  popupWin.changeLine({
-    progress: 30,
-    text: `[30%] ${getString("startup-begin")}`,
-  });
-
-  UIExampleFactory.registerStyleSheet(win);
-
-  UIExampleFactory.registerRightClickMenuItem();
-
-  UIExampleFactory.registerRightClickMenuPopup(win);
-
-  UIExampleFactory.registerWindowMenuWithSeparator();
-
-  PromptExampleFactory.registerNormalCommandExample();
-
-  PromptExampleFactory.registerAnonymousCommandExample(win);
-
-  PromptExampleFactory.registerConditionalCommandExample();
-
-  await Zotero.Promise.delay(1000);
-
   popupWin.changeLine({
     progress: 100,
-    text: `[100%] ${getString("startup-finish")}`,
+    text: getString("startup-finish"),
   });
-  popupWin.startCloseTimer(5000);
-
-  addon.hooks.onDialogEvents("dialogExample");
+  popupWin.startCloseTimer(3000);
 }
 
-async function onMainWindowUnload(win: Window): Promise<void> {
+async function onMainWindowUnload(_win: Window): Promise<void> {
   ztoolkit.unregisterAll();
-  addon.data.dialog?.window?.close();
 }
 
 function onShutdown(): void {
+  unregisterNotifier();
   ztoolkit.unregisterAll();
-  addon.data.dialog?.window?.close();
-  // Remove addon object
   addon.data.alive = false;
   // @ts-expect-error - Plugin instance is not typed
   delete Zotero[addon.data.config.addonInstance];
 }
 
-/**
- * This function is just an example of dispatcher for Notify events.
- * Any operations should be placed in a function to keep this funcion clear.
- */
 async function onNotify(
   event: string,
   type: string,
   ids: Array<string | number>,
-  extraData: { [key: string]: any },
+  _extraData: { [key: string]: any },
 ) {
-  // You can add your code to the corresponding notify type
-  ztoolkit.log("notify", event, type, ids, extraData);
-  if (
-    event == "select" &&
-    type == "tab" &&
-    extraData[ids[0]].type == "reader"
-  ) {
-    BasicExampleFactory.exampleNotifierCallback();
-  } else {
+  if (event !== "add" || type !== "item") return;
+  if (!getPref("autoConvert")) return;
+
+  for (const id of ids) {
+    const item = Zotero.Items.get(id as number);
+    if (!item?.isAttachment()) continue;
+    if (item.attachmentContentType !== "application/pdf") continue;
+
+    // Skip if a Markdown attachment already exists on the parent item
+    const parentID = item.parentItemID;
+    if (parentID) {
+      const parent = Zotero.Items.get(parentID);
+      const siblings: number[] = parent.getAttachments();
+      const alreadyConverted = siblings.some((sibID: number) => {
+        const sib = Zotero.Items.get(sibID);
+        return sib?.attachmentContentType === "text/markdown";
+      });
+      if (alreadyConverted) continue;
+    }
+
+    // Fire-and-forget conversion in background
+    triggerConversion(item);
+  }
+}
+
+async function triggerConversion(item: Zotero.Item): Promise<void> {
+  const engine = getPref("converterEngine") || "docling";
+  const pw = new ztoolkit.ProgressWindow("AutoMD", {
+    closeOnClick: false,
+    closeTime: -1,
+  })
+    .createLine({
+      text: getString("conversion-started", { args: { engine } }),
+      type: "default",
+      progress: 0,
+    })
+    .show();
+
+  try {
+    const outputPath = await convertAttachment(item);
+    const filename = PathUtils.filename(outputPath);
+
+    pw.changeLine({
+      text: getString("conversion-success", { args: { filename } }),
+      type: "success",
+      progress: 100,
+    });
+
+    if (getPref("attachResult")) {
+      await attachMarkdown(item, outputPath);
+    }
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    pw.changeLine({
+      text: getString("conversion-failed", { args: { error } }),
+      type: "fail",
+      progress: 100,
+    });
+    ztoolkit.log(`[AutoMD] Conversion error for item ${item.id}: ${error}`);
+  } finally {
+    pw.startCloseTimer(5000);
+  }
+}
+
+async function attachMarkdown(
+  pdfItem: Zotero.Item,
+  mdPath: string,
+): Promise<void> {
+  const parentID = pdfItem.parentItemID;
+  if (!parentID) return;
+
+  // Verify file exists before attaching
+  const mdFile = Zotero.File.pathToFile(mdPath);
+  if (!mdFile.exists()) {
+    ztoolkit.log(`[AutoMD] Cannot attach: file not found at ${mdPath}`);
     return;
+  }
+
+  // Import the .md file as a stored attachment on the parent item
+  const importedItem = await Zotero.Attachments.importFromFile({
+    file: mdPath,
+    parentItemID: parentID,
+  });
+  if (importedItem) {
+    importedItem.setField("title", PathUtils.filename(mdPath));
+    importedItem.attachmentContentType = "text/markdown";
+    await importedItem.saveTx();
+    ztoolkit.log(
+      `[AutoMD] Attached markdown as item ${importedItem.id} to parent ${parentID}`,
+    );
   }
 }
 
 /**
- * This function is just an example of dispatcher for Preference UI events.
- * Any operations should be placed in a function to keep this funcion clear.
- * @param type event type
- * @param data event data
+ * Finds all PDF attachment items for a given parent item.
+ * If the item itself is a PDF attachment, returns it directly.
  */
-async function onPrefsEvent(type: string, data: { [key: string]: any }) {
-  switch (type) {
-    case "load":
-      registerPrefsScripts(data.window);
-      break;
-    default:
+function getPdfAttachments(item: Zotero.Item): Zotero.Item[] {
+  if (item.isAttachment()) {
+    if (item.attachmentContentType === "application/pdf") return [item];
+    return [];
+  }
+  const attachmentIDs: number[] = item.getAttachments();
+  return attachmentIDs
+    .map((id) => Zotero.Items.get(id))
+    .filter(
+      (att) => att?.attachmentContentType === "application/pdf",
+    ) as Zotero.Item[];
+}
+
+/**
+ * Checks whether a parent item already has a .md attachment.
+ */
+function hasMdAttachment(item: Zotero.Item): boolean {
+  const parentID = item.isAttachment() ? item.parentItemID : item.id;
+  if (!parentID) return false;
+  const parent = Zotero.Items.get(parentID);
+  const siblings: number[] = parent.getAttachments();
+  return siblings.some((sibID: number) => {
+    const sib = Zotero.Items.get(sibID);
+    return sib?.attachmentContentType === "text/markdown";
+  });
+}
+
+/**
+ * Right-click menu handler: convert selected items' PDFs to Markdown.
+ */
+async function convertSelectedItems(): Promise<void> {
+  const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+  const selectedItems = zoteroPane.getSelectedItems() as Zotero.Item[];
+  if (!selectedItems.length) return;
+
+  const pdfItems: Zotero.Item[] = [];
+  for (const item of selectedItems) {
+    for (const pdf of getPdfAttachments(item)) {
+      if (!hasMdAttachment(pdf)) {
+        pdfItems.push(pdf);
+      }
+    }
+  }
+
+  if (!pdfItems.length) {
+    new ztoolkit.ProgressWindow("AutoMD", { closeOnClick: true })
+      .createLine({ text: "No unconverted PDFs in selection.", type: "default", progress: 100 })
+      .show()
+      .startCloseTimer(3000);
+    return;
+  }
+
+  await batchConvert(pdfItems);
+}
+
+/**
+ * Tools menu handler: convert ALL PDFs in the entire library.
+ */
+async function convertAllPdfs(): Promise<void> {
+  try {
+    const libraryID = Zotero.Libraries.userLibraryID;
+    const s = new Zotero.Search({ libraryID });
+    s.addCondition("itemType", "is", "attachment");
+    s.addCondition("contentType", "is", "application/pdf");
+    const ids = await s.search();
+
+    ztoolkit.log(`[AutoMD] Convert All: found ${ids.length} PDF attachments`);
+
+    const pdfItems: Zotero.Item[] = [];
+    for (const id of ids) {
+      const item = Zotero.Items.get(id) as Zotero.Item;
+      if (item && !hasMdAttachment(item)) {
+        pdfItems.push(item);
+      }
+    }
+
+    ztoolkit.log(
+      `[AutoMD] Convert All: ${pdfItems.length} PDFs need conversion (${ids.length - pdfItems.length} already have .md)`,
+    );
+
+    if (!pdfItems.length) {
+      new ztoolkit.ProgressWindow("AutoMD", { closeOnClick: true })
+        .createLine({
+          text: `All ${ids.length} PDFs already converted.`,
+          type: "success",
+          progress: 100,
+        })
+        .show()
+        .startCloseTimer(3000);
       return;
+    }
+
+    // Show count before starting
+    new ztoolkit.ProgressWindow("AutoMD", { closeOnClick: true })
+      .createLine({
+        text: `Starting batch: ${pdfItems.length} PDFs to convert`,
+        type: "default",
+        progress: 0,
+      })
+      .show()
+      .startCloseTimer(3000);
+
+    await batchConvert(pdfItems);
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    ztoolkit.log(`[AutoMD] Convert All error: ${error}`);
+    new ztoolkit.ProgressWindow("AutoMD", { closeOnClick: true })
+      .createLine({
+        text: getString("conversion-failed", { args: { error } }),
+        type: "fail",
+        progress: 100,
+      })
+      .show()
+      .startCloseTimer(5000);
   }
 }
 
-function onShortcuts(type: string) {
-  switch (type) {
-    case "larger":
-      KeyExampleFactory.exampleShortcutLargerCallback();
-      break;
-    case "smaller":
-      KeyExampleFactory.exampleShortcutSmallerCallback();
-      break;
-    default:
-      break;
+/**
+ * Sequentially converts a list of PDF items, showing a progress window.
+ */
+async function batchConvert(pdfItems: Zotero.Item[]): Promise<void> {
+  const total = pdfItems.length;
+  let done = 0;
+  let skipped = 0;
+  const engine = getPref("converterEngine") || "docling";
+
+  const pw = new ztoolkit.ProgressWindow("AutoMD", {
+    closeOnClick: false,
+    closeTime: -1,
+  })
+    .createLine({
+      text: getString("batch-progress", {
+        args: { done: String(done), total: String(total) },
+      }),
+      type: "default",
+      progress: 0,
+    })
+    .show();
+
+  for (const pdfItem of pdfItems) {
+    try {
+      const outputPath = await convertAttachment(pdfItem);
+      if (getPref("attachResult")) {
+        await attachMarkdown(pdfItem, outputPath);
+      }
+      done++;
+    } catch (e) {
+      skipped++;
+      ztoolkit.log(
+        `[AutoMD] Batch: failed item ${pdfItem.id}: ${e instanceof Error ? e.message : e}`,
+      );
+    }
+
+    pw.changeLine({
+      text: getString("batch-progress", {
+        args: { done: String(done + skipped), total: String(total) },
+      }),
+      progress: Math.round(((done + skipped) / total) * 100),
+    });
+  }
+
+  pw.changeLine({
+    text: getString("batch-complete", {
+      args: { done: String(done), total: String(total) },
+    }),
+    type: done > 0 ? "success" : "fail",
+    progress: 100,
+  });
+  pw.startCloseTimer(8000);
+
+  if (skipped > 0) {
+    ztoolkit.log(`[AutoMD] Batch: ${skipped} items failed`);
   }
 }
 
-function onDialogEvents(type: string) {
-  switch (type) {
-    case "dialogExample":
-      HelperExampleFactory.dialogExample();
-      break;
-    case "clipboardExample":
-      HelperExampleFactory.clipboardExample();
-      break;
-    case "filePickerExample":
-      HelperExampleFactory.filePickerExample();
-      break;
-    case "progressWindowExample":
-      HelperExampleFactory.progressWindowExample();
-      break;
-    case "vtableExample":
-      HelperExampleFactory.vtableExample();
-      break;
-    default:
-      break;
-  }
+async function onPrefsEvent(type: string, _data: { [key: string]: any }) {
+  ztoolkit.log(`[AutoMD] prefs event: ${type}`);
 }
-
-// Add your hooks here. For element click, etc.
-// Keep in mind hooks only do dispatch. Don't add code that does real jobs in hooks.
-// Otherwise the code would be hard to read and maintain.
 
 export default {
   onStartup,
@@ -192,6 +445,4 @@ export default {
   onMainWindowUnload,
   onNotify,
   onPrefsEvent,
-  onShortcuts,
-  onDialogEvents,
 };

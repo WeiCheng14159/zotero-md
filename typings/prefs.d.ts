@@ -7,8 +7,11 @@
 declare namespace _ZoteroTypes {
   interface Prefs {
     PluginPrefsMap: {
-      "enable": boolean;
-      "input": string;
+      "autoConvert": boolean;
+      "converterEngine": string;
+      "pythonPath": string;
+      "outputDirectory": string;
+      "attachResult": boolean;
     };
   }
 }

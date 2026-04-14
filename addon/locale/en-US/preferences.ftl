@@ -1,5 +1,13 @@
-pref-title = Addon Template Example
-pref-enable =
-    .label = Enable
-pref-input = Input
+pref-title = AutoMD Settings
+pref-auto-convert =
+    .label = Auto-convert PDFs on download
+pref-converter-engine = Converter engine
+pref-engine-docling = docling (best quality, slower)
+pref-engine-pymupdf4llm = pymupdf4llm (fast, good quality)
+pref-python-path = Python path
+pref-python-path-desc = Path to python3 binary (auto-detected if empty)
+pref-output-directory = Output directory
+pref-output-directory-desc = Leave empty to save the .md file next to the original PDF
+pref-attach-result =
+    .label = Attach resulting .md to Zotero item
 pref-help = { $name } Build { $version } { $time }

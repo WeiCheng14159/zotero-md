@@ -1,30 +1,27 @@
 import { config } from "../package.json";
-import { ColumnOptions, DialogHelper } from "zotero-plugin-toolkit";
 import hooks from "./hooks";
 import { createZToolkit } from "./utils/ztoolkit";
+import { buildOutputPath } from "./modules/converter";
 
 class Addon {
   public data: {
     alive: boolean;
     config: typeof config;
-    // Env type, see build.js
     env: "development" | "production";
     initialized?: boolean;
     ztoolkit: ZToolkit;
     locale?: {
       current: any;
     };
-    prefs?: {
-      window: Window;
-      columns: Array<ColumnOptions>;
-      rows: Array<{ [dataKey: string]: string }>;
-    };
-    dialog?: DialogHelper;
+    notifierID?: string;
   };
-  // Lifecycle hooks
+
   public hooks: typeof hooks;
-  // APIs
-  public api: object;
+
+  // Public API for testing and external access
+  public api: {
+    buildOutputPath: typeof buildOutputPath;
+  };
 
   constructor() {
     this.data = {
@@ -35,7 +32,7 @@ class Addon {
       ztoolkit: createZToolkit(),
     };
     this.hooks = hooks;
-    this.api = {};
+    this.api = { buildOutputPath };
   }
 }
 
