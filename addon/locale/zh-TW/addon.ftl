@@ -1,0 +1,13 @@
+startup-begin = Zotero MD 載入中
+startup-finish = Zotero MD 已就緒
+prefs-title = Zotero MD
+conversion-started = 正在使用 { $engine } 轉換 PDF…
+conversion-success = Markdown 已儲存：{ $filename }
+conversion-failed = 轉換失敗：{ $error }
+python-not-found = 找不到 python3，請在 Zotero MD 設定中設定路徑。
+engine-not-found = { $engine } 未安裝，請執行：pip install { $engine }
+menu-convert-selected = 轉換為 Markdown
+menu-convert-all = Zotero MD：轉換全部 PDF
+batch-progress = 正在轉換 { $done }/{ $total } 個 PDF…
+batch-complete = 批次完成：{ $done }/{ $total } 已轉換
+batch-skipped = 已略過（已有 .md）：{ $skipped }
