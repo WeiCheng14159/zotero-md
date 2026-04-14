@@ -1,7 +1,11 @@
 import { getString, initLocale } from "./utils/locale";
 import { getPref } from "./utils/prefs";
 import { createZToolkit } from "./utils/ztoolkit";
-import { convertAttachment, detectPython, verifyEngine } from "./modules/converter";
+import {
+  convertAttachment,
+  detectPython,
+  verifyEngine,
+} from "./modules/converter";
 
 async function onStartup() {
   await Promise.all([
@@ -23,12 +27,12 @@ async function onStartup() {
   // Auto-detect python3 and verify converter engine
   const pythonPath = detectPython();
   if (pythonPath) {
-    ztoolkit.log(`[AutoMD] python3 found at: ${pythonPath}`);
+    ztoolkit.log(`[ZoteroMD] python3 found at: ${pythonPath}`);
     const engine = getPref("converterEngine") || "docling";
     verifyEngine(pythonPath, engine).then((ok) => {
       if (!ok) {
         setTimeout(() => {
-          new ztoolkit.ProgressWindow("AutoMD", {
+          new ztoolkit.ProgressWindow(addon.data.config.addonName, {
             closeOnClick: true,
             closeTime: -1,
           })
@@ -45,9 +49,9 @@ async function onStartup() {
       }
     });
   } else {
-    ztoolkit.log("[AutoMD] python3 not found");
+    ztoolkit.log("[ZoteroMD] python3 not found");
     setTimeout(() => {
-      new ztoolkit.ProgressWindow("AutoMD", {
+      new ztoolkit.ProgressWindow(addon.data.config.addonName, {
         closeOnClick: true,
         closeTime: -1,
       })
@@ -77,9 +81,7 @@ async function onStartup() {
     },
   };
 
-  addon.data.notifierID = Zotero.Notifier.registerObserver(callback, [
-    "item",
-  ]);
+  addon.data.notifierID = Zotero.Notifier.registerObserver(callback, ["item"]);
 
   Zotero.Plugins.addObserver({
     shutdown: ({ id }: { id: string }) => {
@@ -111,16 +113,16 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   // Right-click context menu: "Convert to Markdown"
   ztoolkit.Menu.register("item", {
     tag: "menuitem",
-    id: "automd-convert-selected",
+    id: `${addon.data.config.addonRef}-convert-selected`,
     label: getString("menu-convert-selected"),
     commandListener: () => convertSelectedItems(),
     icon: `chrome://${addon.data.config.addonRef}/content/icons/favicon@0.5x.png`,
   });
 
-  // Tools menu: "AutoMD: Convert All PDFs"
+  // Tools menu: "Zotero MD: Convert All PDFs"
   ztoolkit.Menu.register("menuTools", {
     tag: "menuitem",
-    id: "automd-convert-all",
+    id: `${addon.data.config.addonRef}-convert-all`,
     label: getString("menu-convert-all"),
     commandListener: () => convertAllPdfs(),
     icon: `chrome://${addon.data.config.addonRef}/content/icons/favicon@0.5x.png`,
@@ -189,7 +191,7 @@ async function onNotify(
 
 async function triggerConversion(item: Zotero.Item): Promise<void> {
   const engine = getPref("converterEngine") || "docling";
-  const pw = new ztoolkit.ProgressWindow("AutoMD", {
+  const pw = new ztoolkit.ProgressWindow(addon.data.config.addonName, {
     closeOnClick: false,
     closeTime: -1,
   })
@@ -220,7 +222,7 @@ async function triggerConversion(item: Zotero.Item): Promise<void> {
       type: "fail",
       progress: 100,
     });
-    ztoolkit.log(`[AutoMD] Conversion error for item ${item.id}: ${error}`);
+    ztoolkit.log(`[ZoteroMD] Conversion error for item ${item.id}: ${error}`);
   } finally {
     pw.startCloseTimer(5000);
   }
@@ -236,7 +238,7 @@ async function attachMarkdown(
   // Verify file exists before attaching
   const mdFile = Zotero.File.pathToFile(mdPath);
   if (!mdFile.exists()) {
-    ztoolkit.log(`[AutoMD] Cannot attach: file not found at ${mdPath}`);
+    ztoolkit.log(`[ZoteroMD] Cannot attach: file not found at ${mdPath}`);
     return;
   }
 
@@ -250,7 +252,7 @@ async function attachMarkdown(
     importedItem.attachmentContentType = "text/markdown";
     await importedItem.saveTx();
     ztoolkit.log(
-      `[AutoMD] Attached markdown as item ${importedItem.id} to parent ${parentID}`,
+      `[ZoteroMD] Attached markdown as item ${importedItem.id} to parent ${parentID}`,
     );
   }
 }
@@ -304,8 +306,12 @@ async function convertSelectedItems(): Promise<void> {
   }
 
   if (!pdfItems.length) {
-    new ztoolkit.ProgressWindow("AutoMD", { closeOnClick: true })
-      .createLine({ text: "No unconverted PDFs in selection.", type: "default", progress: 100 })
+    new ztoolkit.ProgressWindow(addon.data.config.addonName, { closeOnClick: true })
+      .createLine({
+        text: "No unconverted PDFs in selection.",
+        type: "default",
+        progress: 100,
+      })
       .show()
       .startCloseTimer(3000);
     return;
@@ -325,7 +331,7 @@ async function convertAllPdfs(): Promise<void> {
     s.addCondition("contentType", "is", "application/pdf");
     const ids = await s.search();
 
-    ztoolkit.log(`[AutoMD] Convert All: found ${ids.length} PDF attachments`);
+    ztoolkit.log(`[ZoteroMD] Convert All: found ${ids.length} PDF attachments`);
 
     const pdfItems: Zotero.Item[] = [];
     for (const id of ids) {
@@ -336,11 +342,11 @@ async function convertAllPdfs(): Promise<void> {
     }
 
     ztoolkit.log(
-      `[AutoMD] Convert All: ${pdfItems.length} PDFs need conversion (${ids.length - pdfItems.length} already have .md)`,
+      `[ZoteroMD] Convert All: ${pdfItems.length} PDFs need conversion (${ids.length - pdfItems.length} already have .md)`,
     );
 
     if (!pdfItems.length) {
-      new ztoolkit.ProgressWindow("AutoMD", { closeOnClick: true })
+      new ztoolkit.ProgressWindow(addon.data.config.addonName, { closeOnClick: true })
         .createLine({
           text: `All ${ids.length} PDFs already converted.`,
           type: "success",
@@ -352,7 +358,7 @@ async function convertAllPdfs(): Promise<void> {
     }
 
     // Show count before starting
-    new ztoolkit.ProgressWindow("AutoMD", { closeOnClick: true })
+    new ztoolkit.ProgressWindow(addon.data.config.addonName, { closeOnClick: true })
       .createLine({
         text: `Starting batch: ${pdfItems.length} PDFs to convert`,
         type: "default",
@@ -364,8 +370,8 @@ async function convertAllPdfs(): Promise<void> {
     await batchConvert(pdfItems);
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);
-    ztoolkit.log(`[AutoMD] Convert All error: ${error}`);
-    new ztoolkit.ProgressWindow("AutoMD", { closeOnClick: true })
+    ztoolkit.log(`[ZoteroMD] Convert All error: ${error}`);
+    new ztoolkit.ProgressWindow(addon.data.config.addonName, { closeOnClick: true })
       .createLine({
         text: getString("conversion-failed", { args: { error } }),
         type: "fail",
@@ -385,7 +391,7 @@ async function batchConvert(pdfItems: Zotero.Item[]): Promise<void> {
   let skipped = 0;
   const engine = getPref("converterEngine") || "docling";
 
-  const pw = new ztoolkit.ProgressWindow("AutoMD", {
+  const pw = new ztoolkit.ProgressWindow(addon.data.config.addonName, {
     closeOnClick: false,
     closeTime: -1,
   })
@@ -408,7 +414,7 @@ async function batchConvert(pdfItems: Zotero.Item[]): Promise<void> {
     } catch (e) {
       skipped++;
       ztoolkit.log(
-        `[AutoMD] Batch: failed item ${pdfItem.id}: ${e instanceof Error ? e.message : e}`,
+        `[ZoteroMD] Batch: failed item ${pdfItem.id}: ${e instanceof Error ? e.message : e}`,
       );
     }
 
@@ -430,12 +436,12 @@ async function batchConvert(pdfItems: Zotero.Item[]): Promise<void> {
   pw.startCloseTimer(8000);
 
   if (skipped > 0) {
-    ztoolkit.log(`[AutoMD] Batch: ${skipped} items failed`);
+    ztoolkit.log(`[ZoteroMD] Batch: ${skipped} items failed`);
   }
 }
 
 async function onPrefsEvent(type: string, _data: { [key: string]: any }) {
-  ztoolkit.log(`[AutoMD] prefs event: ${type}`);
+  ztoolkit.log(`[ZoteroMD] prefs event: ${type}`);
 }
 
 export default {
