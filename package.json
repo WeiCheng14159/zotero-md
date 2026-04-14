@@ -1,21 +1,21 @@
 {
-  "name": "zotero-local-pdf-manager",
+  "name": "zotero-md",
   "type": "module",
   "version": "0.1.0",
-  "description": "Download or remove local PDF copies for Zotero papers",
+  "description": "Automatically convert paper PDFs to Markdown after download",
   "config": {
-    "addonName": "Local PDF Manager",
-    "addonID": "localpdfmanager@zotero.local",
-    "addonRef": "localpdfmanager",
-    "addonInstance": "LocalPdfManager",
-    "prefsPrefix": "extensions.zotero.localpdfmanager"
+    "addonName": "Zotero MD",
+    "addonID": "zotero-md@zotero.local",
+    "addonRef": "zoteromd",
+    "addonInstance": "ZoteroMD",
+    "prefsPrefix": "extensions.zotero.zoteromd"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/WeiCheng14159/zotero-plugin-template.git"
+    "url": "git+https://github.com/WeiCheng14159/zotero-md.git"
   },
   "author": "wei",
-  "homepage": "https://github.com/WeiCheng14159/zotero-plugin-template#readme",
+  "homepage": "https://github.com/WeiCheng14159/zotero-md#readme",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "start": "zotero-plugin serve",
