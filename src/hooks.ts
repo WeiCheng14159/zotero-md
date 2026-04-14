@@ -306,7 +306,9 @@ async function convertSelectedItems(): Promise<void> {
   }
 
   if (!pdfItems.length) {
-    new ztoolkit.ProgressWindow(addon.data.config.addonName, { closeOnClick: true })
+    new ztoolkit.ProgressWindow(addon.data.config.addonName, {
+      closeOnClick: true,
+    })
       .createLine({
         text: "No unconverted PDFs in selection.",
         type: "default",
@@ -346,7 +348,9 @@ async function convertAllPdfs(): Promise<void> {
     );
 
     if (!pdfItems.length) {
-      new ztoolkit.ProgressWindow(addon.data.config.addonName, { closeOnClick: true })
+      new ztoolkit.ProgressWindow(addon.data.config.addonName, {
+        closeOnClick: true,
+      })
         .createLine({
           text: `All ${ids.length} PDFs already converted.`,
           type: "success",
@@ -358,7 +362,9 @@ async function convertAllPdfs(): Promise<void> {
     }
 
     // Show count before starting
-    new ztoolkit.ProgressWindow(addon.data.config.addonName, { closeOnClick: true })
+    new ztoolkit.ProgressWindow(addon.data.config.addonName, {
+      closeOnClick: true,
+    })
       .createLine({
         text: `Starting batch: ${pdfItems.length} PDFs to convert`,
         type: "default",
@@ -371,7 +377,9 @@ async function convertAllPdfs(): Promise<void> {
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);
     ztoolkit.log(`[ZoteroMD] Convert All error: ${error}`);
-    new ztoolkit.ProgressWindow(addon.data.config.addonName, { closeOnClick: true })
+    new ztoolkit.ProgressWindow(addon.data.config.addonName, {
+      closeOnClick: true,
+    })
       .createLine({
         text: getString("conversion-failed", { args: { error } }),
         type: "fail",
