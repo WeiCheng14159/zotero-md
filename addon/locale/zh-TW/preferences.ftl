@@ -1,0 +1,13 @@
+pref-title = Zotero MD 設定
+pref-auto-convert =
+    .label = 下載後自動轉換 PDF
+pref-converter-engine = 轉換引擎
+pref-engine-docling = docling（品質最佳，速度較慢）
+pref-engine-pymupdf4llm = pymupdf4llm（速度快，品質良好）
+pref-python-path = Python 路徑
+pref-python-path-desc = python3 可執行檔路徑（留空則自動偵測）
+pref-output-directory = 輸出目錄
+pref-output-directory-desc = 留空則將 .md 檔案儲存於原 PDF 旁
+pref-attach-result =
+    .label = 將產生的 .md 附加至 Zotero 項目
+pref-help = { $name } 版本 { $version }，建置於 { $time }
