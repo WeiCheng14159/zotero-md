@@ -116,7 +116,9 @@ function registerMenus(win: _ZoteroTypes.MainWindow) {
           image: icon,
           class: "menuitem-iconic",
         },
-        listeners: [{ type: "command", listener: () => convertSelectedItems() }],
+        listeners: [
+          { type: "command", listener: () => convertSelectedItems() },
+        ],
       },
       itemMenu,
     );
