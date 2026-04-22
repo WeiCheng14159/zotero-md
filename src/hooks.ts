@@ -25,7 +25,7 @@ async function onStartup() {
   });
 
   // Auto-detect python3 and verify converter engine
-  const pythonPath = detectPython();
+  const pythonPath = await detectPython();
   if (pythonPath) {
     ztoolkit.log(`[ZoteroMD] python3 found at: ${pythonPath}`);
     const engine = getPref("converterEngine") || "docling";
@@ -96,6 +96,50 @@ async function onStartup() {
   addon.data.initialized = true;
 }
 
+/**
+ * Register menus by injecting XUL elements directly into the Zotero DOM.
+ * Works on Zotero 7, 8, and 9. Elements are tracked by ztoolkit and removed
+ * on window unload via ztoolkit.unregisterAll().
+ */
+function registerMenus(win: _ZoteroTypes.MainWindow) {
+  const doc = win.document;
+  const icon = `chrome://${addon.data.config.addonRef}/content/icons/favicon@0.5x.png`;
+
+  const itemMenu = doc.getElementById("zotero-itemmenu");
+  if (itemMenu) {
+    ztoolkit.UI.appendElement(
+      {
+        tag: "menuitem",
+        id: `${addon.data.config.addonRef}-convert-selected`,
+        attributes: {
+          label: getString("menu-convert-selected"),
+          image: icon,
+          class: "menuitem-iconic",
+        },
+        listeners: [{ type: "command", listener: () => convertSelectedItems() }],
+      },
+      itemMenu,
+    );
+  }
+
+  const toolsMenu = doc.getElementById("menu_ToolsPopup");
+  if (toolsMenu) {
+    ztoolkit.UI.appendElement(
+      {
+        tag: "menuitem",
+        id: `${addon.data.config.addonRef}-convert-all`,
+        attributes: {
+          label: getString("menu-convert-all"),
+          image: icon,
+          class: "menuitem-iconic",
+        },
+        listeners: [{ type: "command", listener: () => convertAllPdfs() }],
+      },
+      toolsMenu,
+    );
+  }
+}
+
 function unregisterNotifier() {
   if (addon.data.notifierID) {
     Zotero.Notifier.unregisterObserver(addon.data.notifierID);
@@ -106,27 +150,13 @@ function unregisterNotifier() {
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   addon.data.ztoolkit = createZToolkit();
 
+  // Ensure addon FTL strings are available in this window's l10n context.
   win.MozXULElement.insertFTLIfNeeded(
     `${addon.data.config.addonRef}-mainWindow.ftl`,
   );
 
-  // Right-click context menu: "Convert to Markdown"
-  ztoolkit.Menu.register("item", {
-    tag: "menuitem",
-    id: `${addon.data.config.addonRef}-convert-selected`,
-    label: getString("menu-convert-selected"),
-    commandListener: () => convertSelectedItems(),
-    icon: `chrome://${addon.data.config.addonRef}/content/icons/favicon@0.5x.png`,
-  });
-
-  // Tools menu: "Zotero MD: Convert All PDFs"
-  ztoolkit.Menu.register("menuTools", {
-    tag: "menuitem",
-    id: `${addon.data.config.addonRef}-convert-all`,
-    label: getString("menu-convert-all"),
-    commandListener: () => convertAllPdfs(),
-    icon: `chrome://${addon.data.config.addonRef}/content/icons/favicon@0.5x.png`,
-  });
+  // Zotero 7/8/9: inject menu items into the DOM per-window.
+  registerMenus(win);
 
   const popupWin = new ztoolkit.ProgressWindow(addon.data.config.addonName, {
     closeOnClick: true,
@@ -235,9 +265,8 @@ async function attachMarkdown(
   const parentID = pdfItem.parentItemID;
   if (!parentID) return;
 
-  // Verify file exists before attaching
-  const mdFile = Zotero.File.pathToFile(mdPath);
-  if (!mdFile.exists()) {
+  // Verify file exists before attaching (IOUtils compatible with Zotero 7, 8, 9)
+  if (!(await IOUtils.exists(mdPath))) {
     ztoolkit.log(`[ZoteroMD] Cannot attach: file not found at ${mdPath}`);
     return;
   }

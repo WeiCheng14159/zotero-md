@@ -12,26 +12,22 @@ function getHomeDir(): string {
  * Checks virtualenvs, homebrew, and system paths.
  * Saves the found path to preferences.
  */
-export function detectPython(): string | null {
-  const configured = getPref("pythonPath");
-  if (configured && fileExists(configured)) return configured;
+export async function detectPython(): Promise<string | null> {
+  const configured = getPref("pythonPath") as string;
+  if (configured && (await fileExists(configured))) return configured;
 
   const homedir = getHomeDir();
   const candidates: string[] = [];
 
-  // Scan virtualenvs
+  // Scan virtualenvs using IOUtils (compatible with Zotero 7, 8, and 9)
   try {
-    const venvsDir = `${homedir}/.virtualenvs`;
-    const dirFile = Zotero.File.pathToFile(venvsDir);
-    if (dirFile.exists() && dirFile.isDirectory()) {
-      const entries = dirFile.directoryEntries;
-      while (entries?.hasMoreElements()) {
-        // @ts-expect-error nsIFile enumeration not fully typed
-        const entry = entries
-          .getNext()
-          ?.QueryInterface(Components.interfaces.nsIFile);
-        if (entry?.isDirectory()) {
-          candidates.push(`${entry.path}/bin/python3`);
+    const venvsDir = PathUtils.join(homedir, ".virtualenvs");
+    if (await IOUtils.exists(venvsDir)) {
+      const children = await IOUtils.getChildren(venvsDir);
+      for (const child of children) {
+        const info = await IOUtils.stat(child);
+        if (info.type === "directory") {
+          candidates.push(PathUtils.join(child, "bin", "python3"));
         }
       }
     }
@@ -46,7 +42,7 @@ export function detectPython(): string | null {
   );
 
   for (const path of candidates) {
-    if (fileExists(path)) {
+    if (await fileExists(path)) {
       setPref("pythonPath", path);
       ztoolkit.log(`[ZoteroMD] Auto-detected python3 at: ${path}`);
       return path;
@@ -80,10 +76,15 @@ export async function verifyEngine(
   }
 }
 
-function fileExists(path: string): boolean {
+/**
+ * Checks whether a path exists and is a regular file (not a directory).
+ * Uses IOUtils for compatibility with Zotero 7, 8, and 9.
+ */
+async function fileExists(path: string): Promise<boolean> {
   try {
-    const file = Zotero.File.pathToFile(path);
-    return file.exists() && !file.isDirectory();
+    if (!(await IOUtils.exists(path))) return false;
+    const info = await IOUtils.stat(path);
+    return info.type !== "directory";
   } catch {
     return false;
   }
@@ -182,7 +183,7 @@ export async function runConversion(
   await spawnProcess("/bin/sh", ["-c", cmd]);
 
   // Verify output was created
-  if (!fileExists(outputPath)) {
+  if (!(await fileExists(outputPath))) {
     throw new Error(
       `${engine} completed but output file not found at: ${outputPath}`,
     );
@@ -210,7 +211,7 @@ export async function convertAttachment(item: Zotero.Item): Promise<string> {
     );
   }
 
-  const pythonPath = getPref("pythonPath") || detectPython();
+  const pythonPath = getPref("pythonPath") || (await detectPython());
   if (!pythonPath) {
     throw new Error(
       "python3 not found. Set the Python path in Zotero MD settings.",
